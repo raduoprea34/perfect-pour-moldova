@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#e8d8bd" />
+    <meta name="description" content="Perfect Pour — a tactile wine-pouring game inspired by Moldovan pottery and folk ornament." />
+    <title>Perfect Pour — Vin din Moldova</title>
+    <link rel="preload" href="assets/hand-gestures.png" as="image" />
+    <link rel="preload" href="assets/hand-overfill.png" as="image" />
+    <link rel="preload" href="assets/pouring-jug-realistic.png" as="image" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell" id="gameShell">
+      <canvas id="game" aria-label="A vessel waiting to be filled"></canvas>
+
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Perfect Pour home">
+          <svg viewBox="0 0 30 30" aria-hidden="true"><path d="M15 3C12 8 7 13 7 19a8 8 0 0 0 16 0c0-6-5-11-8-16Z"/><path d="M10.5 20.5c.8 2.2 2.3 3.4 4.5 3.6"/></svg>
+          <span>Perfect Pour <small>· Moldova</small></span>
+        </a>
+
+        <div class="scoreboard" aria-label="Current score">
+          <span class="score-label">Puncte</span>
+          <strong id="score">0000</strong>
+          <span class="score-rule"></span>
+          <span class="score-label">Serie</span>
+          <strong id="streak">×0</strong>
+        </div>
+
+        <div class="actions">
+          <button id="soundButton" class="round-button" type="button" aria-label="Mute sound" aria-pressed="false">
+            <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.2-.6a5 5 0 0 1 0 7.2M18.7 6a8.5 8.5 0 0 1 0 12"/></svg>
+            <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12 1 5 5m0-5-5 5"/></svg>
+          </button>
+          <button id="resetButton" class="round-button" type="button" aria-label="Empty this vessel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 7M19 4v4h-4"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="level-meta" aria-live="polite">
+        <span id="roundLabel">Vas 01</span>
+        <span class="meta-dot"></span>
+        <span id="vesselName">Cristal cu stele</span>
+      </section>
+
+      <section id="intro" class="intro">
+        <span class="eyebrow">Din inima Moldovei</span>
+        <h1>Toarnă<br><em>cu măsură</em></h1>
+        <p>Toarnă vin din ulciorul de lut. Oprește-te la semnul de pe vas.</p>
+        <button id="startButton" class="pill-button" type="button"><span>Începe jocul</span><span aria-hidden="true">↓</span></button>
+      </section>
+
+      <section id="result" class="result-card" aria-live="assertive">
+        <span id="resultKicker" class="result-kicker">Aproape perfect</span>
+        <strong id="resultPercent">98.7%</strong>
+        <p id="resultMessage">A breath away.</p>
+        <button id="nextButton" class="pill-button dark" type="button"><span>Următorul vas</span><span aria-hidden="true">→</span></button>
+      </section>
+
+      <div id="instruction" class="instruction" aria-live="polite">
+        <span class="hold-icon"><i></i></span>
+        <span id="instructionText">Ține apăsat pentru a turna</span>
+      </div>
+
+      <aside class="precision-scale" aria-hidden="true">
+        <span>Peste</span><div class="scale-line"><i id="scaleMarker"></i></div><span>Sub</span>
+      </aside>
+
+      <footer>
+        <span>Ține <kbd>Space</kbd> sau apasă ecranul</span>
+        <span id="bestScore">Cel mai bun —</span>
+      </footer>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>
