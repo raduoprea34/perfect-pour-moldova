@@ -25,7 +25,7 @@
   const bestScore = document.querySelector('#bestScore');
 
   const TAU = Math.PI * 2;
-  const HAND_SIDE_PADDING = 12;
+  const HAND_SIDE_PADDING = 4;
   const HAND_GLASS_GAP = 8;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const palette = [
@@ -130,8 +130,8 @@
       return { cx: previewBounds.left + previewBounds.width / 2 - h * .42, top, bottom: top + h, h, w: h * .62 };
     }
     const baseHeight = Math.min(height * (mobile ? .47 : .55), mobile ? 385 : 440);
-    const baseSize = mobile ? 112 : Math.min(195, baseHeight * .5);
-    const guideWidth = Math.min(Math.max(112, baseSize * 1.44 + 8), width * .36);
+    const baseSize = mobile ? 130 : Math.min(220, baseHeight * .56);
+    const guideWidth = Math.min(Math.max(112, baseSize * 1.44 + 8), width * .40);
     const guideSize = Math.min(baseSize, (guideWidth - 8) / 1.44);
     const profileWidth = Math.max(...vessel.points.map(point => point[0]));
     const available = width - HAND_SIDE_PADDING * 2 - guideWidth - HAND_GLASS_GAP;
@@ -479,7 +479,7 @@
       ctx.save();ctx.globalAlpha=overfillBlend;ctx.translate(x+size*.5+shake,y+size*.47);ctx.rotate((reducedMotion?0:Math.sin(time*.021)*.045)*overfillBlend);ctx.drawImage(overfillHand,-overWidth*.5,-overHeight*.5,overWidth,overHeight);ctx.restore();
     }
     const phase=overfillBlend>.45?2:gestureBlend>.5?1:0, labels=['Toarnă oleacă...','Destul!','Gata uuăăii!!!'];
-    ctx.save();ctx.textAlign='center';ctx.font=`800 ${mobile?11:12}px Inter, sans-serif`;ctx.letterSpacing='1px';ctx.fillStyle='#722339';
+    ctx.save();ctx.textAlign='center';ctx.font=`800 ${mobile?12.5:13.5}px Inter, sans-serif`;ctx.letterSpacing='1px';ctx.fillStyle='#722339';
     ctx.fillText(labels[phase],m.guideX,y+size+17,m.guideWidth);ctx.restore();
   }
 

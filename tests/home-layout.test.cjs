@@ -4,7 +4,7 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8');
 const body = source.slice(source.indexOf('  function metrics()'), source.indexOf('  function capacityHeight'));
-const metrics = new Function('width', 'height', 'state', 'previewBounds', `const vessel={points:[[.43,1]]}, HAND_SIDE_PADDING=12, HAND_GLASS_GAP=8; ${body}; return metrics();`);
+const metrics = new Function('width', 'height', 'state', 'previewBounds', `const vessel={points:[[.43,1]]}, HAND_SIDE_PADDING=4, HAND_GLASS_GAP=8; ${body}; return metrics();`);
 
 const pourBody = source.slice(source.indexOf('  function drawPour(time)'), source.indexOf('  function drawEffects'));
 const drawPreview = new Function('metrics', 'ctx', 'jugSprite', 'width', `
@@ -38,7 +38,7 @@ for (const [width, height] of [[272, 200], [327, 270], [420, 280], [260, 240], [
 for (const [width, height] of [[320, 568], [390, 844], [720, 800], [1440, 900]]) {
   const m = metrics(width, height, 'ready');
   assert.ok(m.cx >= width / 2);
-  assert.ok(m.cx + m.w * .59 <= width - 12 + 1e-8);
+  assert.ok(m.cx + m.w * .59 <= width - 4 + 1e-8);
   assert.ok(m.top > 0 && m.bottom < height);
 }
 console.log('Passed: preview is centered, stream is visible, artwork fits, and gameplay respects its right margin.');
