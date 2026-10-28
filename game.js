@@ -10,22 +10,23 @@
   const overfillHand = new Image();
   overfillHand.src = 'assets/hand-overfill.png';
   const shell = document.querySelector('#gameShell');
+  const homePreview = document.querySelector('#homePreview');
+  let previewBounds;
   const startButton = document.querySelector('#startButton');
   const nextButton = document.querySelector('#nextButton');
   const resetButton = document.querySelector('#resetButton');
   const soundButton = document.querySelector('#soundButton');
   const scoreElement = document.querySelector('#score');
   const streakElement = document.querySelector('#streak');
-  const roundLabel = document.querySelector('#roundLabel');
-  const vesselName = document.querySelector('#vesselName');
   const instructionText = document.querySelector('#instructionText');
-  const scaleMarker = document.querySelector('#scaleMarker');
   const resultKicker = document.querySelector('#resultKicker');
   const resultPercent = document.querySelector('#resultPercent');
   const resultMessage = document.querySelector('#resultMessage');
   const bestScore = document.querySelector('#bestScore');
 
   const TAU = Math.PI * 2;
+  const HAND_SIDE_PADDING = 12;
+  const HAND_GLASS_GAP = 8;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const palette = [
     { liquid: '#91283a', light: '#d65b64', dark: '#4b111b', clay: '#b66f45', glaze: '#e5b87e' },
@@ -54,6 +55,8 @@
   let pouring = false;
   let pourStart = 0;
   let settleTimer = 0;
+  let settleDuration = 900;
+  let wavePhase = 0;
   let surfaceEnergy = 0;
   let gestureBlend = 0;
   let overfillBlend = 0;
@@ -107,18 +110,39 @@
   }
 
   function resize() {
-    width = innerWidth; height = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+    width = shell.clientWidth; height = shell.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
     canvas.width = width * dpr; canvas.height = height * dpr;
     canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (state === 'intro') {
+      const shellBounds = shell.getBoundingClientRect();
+      const bounds = homePreview.getBoundingClientRect();
+      previewBounds = { left: bounds.left - shellBounds.left, top: bounds.top - shellBounds.top, width: bounds.width, height: bounds.height };
+    }
+    shell.style.setProperty('--glass-bottom', `${metrics().bottom}px`);
   }
 
   function metrics() {
-    const mobile = width < 720;
-    const h = Math.min(height * (mobile ? .47 : .55), mobile ? 385 : 440);
+    const mobile = width <= 720;
+    if (state === 'intro') {
+      const h = Math.min(previewBounds.height / 1.7, previewBounds.width / 1.5, 340);
+      const top = previewBounds.top + (previewBounds.height - h * 1.613) / 2 + h * .613;
+      return { cx: previewBounds.left + previewBounds.width / 2 - h * .42, top, bottom: top + h, h, w: h * .62 };
+    }
+    const baseHeight = Math.min(height * (mobile ? .47 : .55), mobile ? 385 : 440);
+    const baseSize = mobile ? 112 : Math.min(195, baseHeight * .5);
+    const guideWidth = Math.min(Math.max(112, baseSize * 1.44 + 8), width * .36);
+    const guideSize = Math.min(baseSize, (guideWidth - 8) / 1.44);
+    const profileWidth = Math.max(...vessel.points.map(point => point[0]));
+    const available = width - HAND_SIDE_PADDING * 2 - guideWidth - HAND_GLASS_GAP;
+    const h = Math.min(baseHeight, available / ((profileWidth + .59) * .62));
     const w = h * .62;
-    const top = height * (mobile ? .34 : .31);
-    return { cx: width * .5, top, bottom: top + h, h, w };
+    const minCenter = HAND_SIDE_PADDING + guideWidth + HAND_GLASS_GAP + profileWidth * w;
+    const maxCenter = width - HAND_SIDE_PADDING - .59 * w;
+    const cx = Math.min(maxCenter, Math.max(width / 2, minCenter));
+    const top = height * (mobile ? .34 : .31) + (baseHeight - h) / 2;
+    const guideX = cx - profileWidth * w - HAND_GLASS_GAP - guideWidth / 2;
+    return { cx, top, bottom: top + h, h, w, guideSize, guideWidth, guideX };
   }
 
   function capacityHeight(m) { return m.h*(1-vessel.points[1][1]); }
@@ -157,10 +181,9 @@
   function setTheme() {
     colors = palette[round % palette.length];
     vessel = vessels[round % vessels.length];
+    shell.style.setProperty('--glass-bottom', `${metrics().bottom}px`);
     document.documentElement.style.setProperty('--liquid', colors.liquid);
     document.documentElement.style.setProperty('--liquid-light', colors.light);
-    roundLabel.textContent = `Vas ${String(round + 1).padStart(2, '0')}`;
-    vesselName.textContent = vessel.name;
     scoreElement.textContent = String(score).padStart(4, '0');
     streakElement.textContent = `×${streak}`;
     bestScore.textContent = best ? `Cel mai bun ${best.toFixed(1)}%` : 'Cel mai bun —';
@@ -172,6 +195,8 @@
     shell.classList.add('playing');
     state = 'ready';
     resetPour();
+    document.body.scrollTop = 0;
+    resize();
   }
 
   function resetPour() {
@@ -181,7 +206,6 @@
     state = shell.classList.contains('playing') ? 'ready' : 'intro';
     shell.classList.remove('pouring', 'show-result');
     canvas.classList.remove('is-pouring');
-    scaleMarker.style.top = '100%';
     instructionText.textContent = 'Ține apăsat pentru a turna';
   }
 
@@ -197,10 +221,10 @@
   function endPour() {
     if (state !== 'pouring') return;
     pouring = false; state = 'settling'; settleTimer = 0;
+    settleDuration = 650 + 350 * Math.min(1, vessel.speed / .27) * surfaceEnergy;
     audio?.stopPour();
     shell.classList.remove('pouring'); canvas.classList.remove('is-pouring');
     instructionText.textContent = 'Lasă vinul să se așeze…';
-    surfaceEnergy = Math.max(surfaceEnergy, .75);
     createRing();
   }
 
@@ -273,15 +297,31 @@
       }
       if (fill >= 1.13) endPour();
     }
-    displayedFill += (fill - displayedFill) * Math.min(1, dt * .008);
-    surfaceEnergy *= Math.pow(.997, dt);
+    if (state !== 'settling') {
+      displayedFill += (fill - displayedFill) * Math.min(1, dt * .008);
+      surfaceEnergy *= Math.pow(.997, dt);
+    }
     const gestureTarget = displayedFill >= vessel.target - .11 ? 1 : 0;
     gestureBlend += (gestureTarget - gestureBlend) * (reducedMotion ? 1 : Math.min(1, dt * .007));
     const overfillTarget = displayedFill > vessel.target + .025 ? 1 : 0;
     overfillBlend += (overfillTarget - overfillBlend) * (reducedMotion ? 1 : Math.min(1, dt * .012));
-    if (state === 'settling') { settleTimer += dt; if (settleTimer > (reducedMotion ? 220 : 850)) evaluate(); }
-    const marker = 100 - Math.min(2, displayedFill / vessel.target) * 50;
-    scaleMarker.style.top = `${Math.max(0, marker)}%`;
+    let waveSpeed = 1;
+    if (state === 'settling') {
+      const previous = Math.min(1, settleTimer / settleDuration);
+      settleTimer += dt;
+      const progress = reducedMotion ? 1 : Math.min(1, settleTimer / settleDuration);
+      // Smoothstep preserves the moving surface, then eases it gently to rest.
+      const remaining = (1-progress)**2 * (1+2*progress);
+      waveSpeed = .25 + .75 * remaining;
+      const damping = remaining / ((1-previous)**2 * (1+2*previous));
+      surfaceEnergy *= damping; tilt *= damping;
+      displayedFill = fill + (displayedFill-fill) * damping;
+      if (progress === 1) {
+        surfaceEnergy = 0; tilt = 0; displayedFill = fill;
+        evaluate();
+      }
+    }
+    if (!reducedMotion) wavePhase += dt * .006 * waveSpeed;
   }
 
   function drawBackdrop(time) {
@@ -299,7 +339,6 @@
   }
 
   function drawVessel(time) {
-    if (state === 'intro') return;
     const m=metrics(), path=vesselPath();
     const liquidTop=m.bottom-Math.min(displayedFill,1)*capacityHeight(m);
 
@@ -323,7 +362,7 @@
       const wave=7*surfaceEnergy;
       ctx.beginPath();ctx.moveTo(m.cx-m.w,liquidTop);
       for(let x=m.cx-m.w;x<=m.cx+m.w;x+=7) {
-        const y=liquidTop+Math.sin(x*.045+time*.006)*wave+tilt*(x-m.cx);
+        const y=liquidTop+Math.sin(x*.045+wavePhase)*wave+tilt*(x-m.cx);
         ctx.lineTo(x,y);
       }
       ctx.lineTo(m.cx+m.w,m.bottom+20);ctx.lineTo(m.cx-m.w,m.bottom+20);ctx.closePath();
@@ -331,7 +370,7 @@
       liquid.addColorStop(0,colors.light);liquid.addColorStop(.14,colors.liquid);liquid.addColorStop(1,colors.dark);
       ctx.fillStyle=liquid;ctx.globalAlpha=.86;ctx.fill();ctx.globalAlpha=1;
       ctx.beginPath();ctx.moveTo(m.cx-m.w,liquidTop);
-      for(let x=m.cx-m.w;x<=m.cx+m.w;x+=6)ctx.lineTo(x,liquidTop+Math.sin(x*.045+time*.006)*wave+tilt*(x-m.cx));
+      for(let x=m.cx-m.w;x<=m.cx+m.w;x+=6)ctx.lineTo(x,liquidTop+Math.sin(x*.045+wavePhase)*wave+tilt*(x-m.cx));
       ctx.strokeStyle='rgba(255,255,255,.72)';ctx.lineWidth=2;ctx.shadowColor=colors.light;ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
 
       const surfaceT=Math.max(.17,Math.min(1,(liquidTop-m.top)/m.h));
@@ -339,7 +378,7 @@
       const foamCount=Math.round(surfaceEnergy*10);
       for(let i=0;i<foamCount;i++){
         const fx=m.cx-surfaceHalf+(i+.5)/Math.max(1,foamCount)*surfaceHalf*2;
-        const fy=liquidTop+Math.sin(fx*.045+time*.006)*wave+tilt*(fx-m.cx)+Math.sin(i*17.2)*2;
+        const fy=liquidTop+Math.sin(fx*.045+wavePhase)*wave+tilt*(fx-m.cx)+Math.sin(i*17.2)*2;
         ctx.beginPath();ctx.arc(fx,fy,1.2+(i%3)*.55,0,TAU);ctx.fillStyle='rgba(255,255,255,.66)';ctx.fill();
       }
 
@@ -380,9 +419,9 @@
     ctx.save();ctx.beginPath();ctx.ellipse(m.cx,rimY,rimHalf,rimDepth,0,0,Math.PI);ctx.strokeStyle=vessel.type==='crystal'?'rgba(255,255,255,.58)':'#7b402b';ctx.lineWidth=vessel.type==='crystal'?1.4:2;ctx.stroke();
     ctx.beginPath();ctx.ellipse(m.cx,rimY,rimHalf*.88,rimDepth*.56,0,0,TAU);ctx.strokeStyle=vessel.type==='crystal'?'rgba(116,143,143,.36)':'rgba(83,42,28,.52)';ctx.lineWidth=1;ctx.stroke();ctx.restore();
 
-    if(displayedFill>.001){
+    if(displayedFill>.001 && surfaceEnergy>0){
       const surfaceT=Math.max(.17,Math.min(1,(liquidTop-m.top)/m.h)), surfaceHalf=halfWidthAt(surfaceT)*m.w*.9;
-      ctx.save();ctx.beginPath();ctx.ellipse(m.cx,liquidTop,surfaceHalf,Math.max(3,5*surfaceEnergy),tilt,0,TAU);ctx.fillStyle=colors.light;ctx.globalAlpha=vessel.type==='clay'?.62:.34;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.68)';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+      ctx.save();ctx.beginPath();ctx.ellipse(m.cx,liquidTop,surfaceHalf,5*surfaceEnergy,tilt,0,TAU);ctx.fillStyle=colors.light;ctx.globalAlpha=(vessel.type==='clay'?.62:.34)*surfaceEnergy;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.68)';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
     }
 
     const targetY=m.bottom-vessel.target*capacityHeight(m);
@@ -397,10 +436,10 @@
   }
 
   function drawPour(time) {
-    if (!pouring) return;
+    if (!pouring && state !== 'intro') return;
     const m=metrics(), mouthY=m.top+m.h*.17;
     const jugWidth=Math.min(width*(width<720?.96:.52),m.h*1.35), jugHeight=jugWidth*((jugSprite.naturalHeight/jugSprite.naturalWidth)||(853/1280));
-    const jugX=m.cx-jugWidth*.18, jugY=Math.max(105,m.top-45)-jugHeight*.45;
+    const jugX=m.cx-jugWidth*.18, jugY=state==='intro'?mouthY-m.h*.32-jugHeight*.515:Math.max(105,m.top-45)-jugHeight*.45;
     const sourceX=jugX+jugWidth*.192, sourceY=jugY+jugHeight*.515;
     const streamX=m.cx+Math.sin(time*.013)*1.2;
     const stream=ctx.createLinearGradient(streamX,sourceY,streamX,mouthY);
@@ -428,9 +467,8 @@
 
   function drawHandGuide(time) {
     if(state==='intro'||!handSprite.complete||!handSprite.naturalWidth)return;
-    const m=metrics(), mobile=width<720, size=mobile?112:Math.min(195,m.h*.5);
-    const glassLeft=m.cx-Math.max(...vessel.points.map(point=>point[0]))*m.w;
-    const x=Math.max(mobile?-14:24,glassLeft-size-(mobile?8:24)), y=m.top+m.h*.47-size*.5;
+    const m=metrics(), mobile=width<=720, size=m.guideSize;
+    const x=m.guideX-size/2, y=m.top+m.h*.47-size*.5;
     const frameWidth=handSprite.naturalWidth/2, pinchAlpha=Math.max(0,1-gestureBlend*1.25), stopAlpha=Math.max(0,(gestureBlend-.08)/.92)*(1-overfillBlend);
     ctx.save();ctx.globalAlpha=pinchAlpha;ctx.drawImage(handSprite,0,0,frameWidth,handSprite.naturalHeight,x,y+Math.sin(time*.004)*2,size,size);ctx.restore();
     const stopScale=.92+gestureBlend*.08, stopSize=size*stopScale;
@@ -441,7 +479,8 @@
       ctx.save();ctx.globalAlpha=overfillBlend;ctx.translate(x+size*.5+shake,y+size*.47);ctx.rotate((reducedMotion?0:Math.sin(time*.021)*.045)*overfillBlend);ctx.drawImage(overfillHand,-overWidth*.5,-overHeight*.5,overWidth,overHeight);ctx.restore();
     }
     const phase=overfillBlend>.45?2:gestureBlend>.5?1:0, labels=['Toarnă oleacă...','Destul!','Gata uuăăii!!!'];
-    ctx.save();ctx.textAlign='center';ctx.font=`800 ${mobile?11:12}px Inter, sans-serif`;ctx.letterSpacing='1px';ctx.fillStyle='#722339';ctx.fillText(labels[phase],x+size*.54,y+size+17);ctx.restore();
+    ctx.save();ctx.textAlign='center';ctx.font=`800 ${mobile?11:12}px Inter, sans-serif`;ctx.letterSpacing='1px';ctx.fillStyle='#722339';
+    ctx.fillText(labels[phase],m.guideX,y+size+17,m.guideWidth);ctx.restore();
   }
 
   function frame(time) {
@@ -464,11 +503,10 @@
   startButton.addEventListener('click',startGame);
   nextButton.addEventListener('click',nextRound);
   resetButton.addEventListener('click',resetPour);
-  document.querySelector('.brand').addEventListener('click',event=>{event.preventDefault();resetPour();});
 
-  soundButton.classList.toggle('is-muted',muted);soundButton.setAttribute('aria-pressed',String(muted));
+  soundButton.classList.toggle('is-muted',muted);soundButton.setAttribute('aria-pressed',String(muted));soundButton.setAttribute('aria-label',muted?'Pornește sunetul':'Oprește sunetul');
   soundButton.addEventListener('click',()=>{
-    muted=!muted;localStorage.setItem('pour-muted',muted);soundButton.classList.toggle('is-muted',muted);soundButton.setAttribute('aria-pressed',String(muted));soundButton.setAttribute('aria-label',muted?'Unmute sound':'Mute sound');
+    muted=!muted;localStorage.setItem('pour-muted',muted);soundButton.classList.toggle('is-muted',muted);soundButton.setAttribute('aria-pressed',String(muted));soundButton.setAttribute('aria-label',muted?'Pornește sunetul':'Oprește sunetul');
     if(!muted){if(!audio)audio=new SoundEngine();audio.wake();audio.tone(520,.25,.16);}
     else audio?.stopPour();
   });
@@ -476,6 +514,7 @@
   addEventListener('keydown',event=>{if(event.code==='Space'&&!event.repeat){event.preventDefault();if(state==='intro')startGame();else beginPour();}if(event.key==='Escape')resetPour();});
   addEventListener('keyup',event=>{if(event.code==='Space'){event.preventDefault();endPour();}});
   addEventListener('resize',resize);
+  new ResizeObserver(resize).observe(shell);
 
   resize();setTheme();requestAnimationFrame(frame);
 })();
