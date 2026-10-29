@@ -363,15 +363,9 @@
     if (!reducedMotion) wavePhase += dt * .006 * waveSpeed;
   }
 
-  function drawBackdrop(time) {
+  function drawBackdrop() {
     ctx.clearRect(0,0,width,height);
     const m=metrics();
-    ctx.save(); ctx.globalAlpha=.2;
-    for(let i=0;i<7;i++) {
-      const x=width*(.1+i*.135), y=height*.17+Math.sin(time*.00035+i)*9;
-      ctx.beginPath(); ctx.arc(x,y,1+i%2,0,TAU); ctx.fillStyle=colors.liquid; ctx.fill();
-    }
-    ctx.restore();
     const shadow=ctx.createRadialGradient(m.cx,m.bottom+18,0,m.cx,m.bottom+18,m.w*.75);
     shadow.addColorStop(0,'rgba(30,45,43,.18)');shadow.addColorStop(1,'rgba(30,45,43,0)');
     ctx.save();ctx.scale(1,.18);ctx.fillStyle=shadow;ctx.beginPath();ctx.arc(m.cx,(m.bottom+20)/.18,m.w*.75,0,TAU);ctx.fill();ctx.restore();
@@ -524,7 +518,7 @@
 
   function frame(time) {
     const dt=Math.min(34,time-lastTime);lastTime=time;
-    update(dt,time);drawBackdrop(time);drawVessel(time);drawPour(time);drawHandGuide(time);drawEffects(dt);requestAnimationFrame(frame);
+    update(dt,time);drawBackdrop();drawVessel(time);drawPour(time);drawHandGuide(time);drawEffects(dt);requestAnimationFrame(frame);
   }
 
   function handleDown(event) {
