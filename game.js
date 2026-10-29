@@ -4,16 +4,20 @@
   const canvas = document.querySelector('#game');
   const ctx = canvas.getContext('2d');
   const handSprite = new Image();
-  handSprite.src = 'assets/hand-gestures.png';
+  handSprite.src = 'assets/hand-gestures.webp';
   const jugSprite = new Image();
-  jugSprite.src = 'assets/pouring-jug-realistic.png';
+  jugSprite.src = 'assets/pouring-jug-realistic.webp';
   const overfillHand = new Image();
-  overfillHand.src = 'assets/hand-overfill.png';
+  overfillHand.src = 'assets/hand-overfill.webp';
   const shell = document.querySelector('#gameShell');
   const homePreview = document.querySelector('#homePreview');
   let previewBounds;
   const startButton = document.querySelector('#startButton');
+  const assetStatus = document.querySelector('#assetStatus');
+  const startLabel = startButton.querySelector('span');
+  let assetsReady = false, assetsLoading = false;
   const nextButton = document.querySelector('#nextButton');
+  const homeButton = document.querySelector('#homeButton');
   const resetButton = document.querySelector('#resetButton');
   const soundButton = document.querySelector('#soundButton');
   const scoreElement = document.querySelector('#score');
@@ -189,7 +193,35 @@
     bestScore.textContent = best ? `Cel mai bun ${best.toFixed(1)}%` : 'Cel mai bun —';
   }
 
+  async function loadAssets() {
+    if (assetsLoading) return;
+    assetsLoading = true;
+    startButton.disabled = true;
+    startLabel.textContent = 'Se încarcă…';
+    assetStatus.textContent = 'Se pregătesc ulciorul și gesturile…';
+    try {
+      await Promise.all([handSprite, jugSprite, overfillHand].map(sprite => sprite.decode()));
+      assetsReady = true;
+      shell.classList.add('assets-ready');
+      assetStatus.hidden = true;
+      startLabel.textContent = 'Începe jocul';
+    } catch {
+      assetStatus.textContent = 'Imaginile nu s-au încărcat. Încearcă din nou.';
+      startLabel.textContent = 'Reîncearcă';
+    } finally {
+      assetsLoading = false;
+      startButton.disabled = false;
+    }
+  }
+
   function startGame() {
+    if (!assetsReady) {
+      if (!assetsLoading) {
+        [handSprite, jugSprite, overfillHand].forEach(sprite => { sprite.src = sprite.src; });
+        loadAssets();
+      }
+      return;
+    }
     if (!audio) audio = new SoundEngine();
     audio.wake();
     shell.classList.add('playing');
@@ -197,6 +229,13 @@
     resetPour();
     document.body.scrollTop = 0;
     resize();
+  }
+
+  function returnHome() {
+    shell.classList.remove('playing');
+    resetPour();
+    resize();
+    startButton.focus();
   }
 
   function resetPour() {
@@ -436,7 +475,7 @@
   }
 
   function drawPour(time) {
-    if (!pouring && state !== 'intro') return;
+    if ((!pouring && state !== 'intro') || !jugSprite.complete || !jugSprite.naturalWidth) return;
     const m=metrics(), mouthY=m.top+m.h*.17;
     const jugWidth=Math.min(width*(width<720?.96:.52),m.h*1.35), jugHeight=jugWidth*((jugSprite.naturalHeight/jugSprite.naturalWidth)||(853/1280));
     const jugX=m.cx-jugWidth*.18, jugY=state==='intro'?mouthY-m.h*.32-jugHeight*.515:Math.max(105,m.top-45)-jugHeight*.45;
@@ -503,6 +542,7 @@
   startButton.addEventListener('click',startGame);
   nextButton.addEventListener('click',nextRound);
   resetButton.addEventListener('click',resetPour);
+  homeButton.addEventListener('click',returnHome);
 
   soundButton.classList.toggle('is-muted',muted);soundButton.setAttribute('aria-pressed',String(muted));soundButton.setAttribute('aria-label',muted?'Pornește sunetul':'Oprește sunetul');
   soundButton.addEventListener('click',()=>{
@@ -511,10 +551,10 @@
     else audio?.stopPour();
   });
 
-  addEventListener('keydown',event=>{if(event.code==='Space'&&!event.repeat){event.preventDefault();if(state==='intro')startGame();else beginPour();}if(event.key==='Escape')resetPour();});
-  addEventListener('keyup',event=>{if(event.code==='Space'){event.preventDefault();endPour();}});
+  addEventListener('keydown',event=>{if(event.target.closest?.('button'))return;if(event.code==='Space'&&!event.repeat){event.preventDefault();if(state==='intro')startGame();else beginPour();}if(event.key==='Escape')resetPour();});
+  addEventListener('keyup',event=>{if(event.target.closest?.('button'))return;if(event.code==='Space'){event.preventDefault();endPour();}});
   addEventListener('resize',resize);
   new ResizeObserver(resize).observe(shell);
 
-  resize();setTheme();requestAnimationFrame(frame);
+  resize();setTheme();loadAssets();requestAnimationFrame(frame);
 })();

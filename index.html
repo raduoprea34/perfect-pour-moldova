@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#e8d8bd" />
     <meta name="description" content="Toarnă cu măsură — un joc de turnat vin, inspirat de vasele și tradițiile Moldovei." />
     <title>Toarnă cu măsură — Vin din Moldova</title>
-    <link rel="preload" href="assets/hand-gestures.png" as="image" />
-    <link rel="preload" href="assets/hand-overfill.png" as="image" />
-    <link rel="preload" href="assets/pouring-jug-realistic.png" as="image" />
+    <link rel="preload" href="assets/pouring-jug-realistic.webp" as="image" fetchpriority="high" />
+    <link rel="preload" href="assets/hand-gestures.webp" as="image" />
+    <link rel="preload" href="assets/hand-overfill.webp" as="image" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -25,6 +25,9 @@
         </div>
 
         <div class="actions">
+          <button id="homeButton" class="round-button" type="button" aria-label="Înapoi la început" title="Înapoi la început">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg>
+          </button>
           <button id="soundButton" class="round-button" type="button" aria-label="Oprește sunetul" aria-pressed="false">
             <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.2-.6a5 5 0 0 1 0 7.2M18.7 6a8.5 8.5 0 0 1 0 12"/></svg>
             <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12 1 5 5m0-5-5 5"/></svg>
@@ -36,12 +39,14 @@
       </header>
 
       <div class="home-layout">
-        <div id="homePreview" class="home-preview" aria-hidden="true"></div>
+        <div id="homePreview" class="home-preview">
+          <p id="assetStatus" class="asset-status" role="status">Se pregătesc ulciorul și gesturile…</p>
+        </div>
         <section id="intro" class="intro">
           <span class="eyebrow">Din inima Moldovei</span>
           <h1>Toarnă<br><em>cu măsură</em></h1>
           <p>Toarnă vin din ulciorul de lut. Oprește-te la semnul de pe vas.</p>
-          <button id="startButton" class="pill-button" type="button"><span>Începe jocul</span><span aria-hidden="true">→</span></button>
+          <button id="startButton" class="pill-button" type="button" disabled><span>Se încarcă…</span><span aria-hidden="true">→</span></button>
           <p class="intro-hint">Ține apăsat ca să torni. Eliberează la semn.<span class="keyboard-hint"> Poți folosi și <kbd>Space</kbd>.</span></p>
         </section>
 

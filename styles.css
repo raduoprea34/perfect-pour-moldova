@@ -154,6 +154,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; backg
 
 /* Keep the welcome screen focused on the first action. */
 .game-shell:not(.playing) .scoreboard,
+.game-shell:not(.playing) #homeButton,
 .game-shell:not(.playing) #soundButton,
 .game-shell:not(.playing) #resetButton,
 .game-shell:not(.playing) footer { visibility: hidden; }
@@ -184,4 +185,14 @@ body:has(.game-shell:not(.playing)) { overflow-y: auto; touch-action: pan-y; }
   .intro h1 { font-size: clamp(42px, 6vw, 60px); margin: 0; }
   .intro p { margin: 0; font-size: 14px; }
   .intro .intro-hint { font-size: 12px; }
+}
+
+.game-shell:not(.assets-ready) #game { visibility: hidden; }
+.home-preview { display: grid; place-items: center; }
+.asset-status { max-width: 28ch; margin: 0; padding: 16px; color: var(--muted); font-size: 14px; line-height: 1.5; text-align: center; }
+.asset-status[hidden] { display: none; }
+.pill-button:disabled { opacity: .6; cursor: wait; transform: none; }
+
+@media (max-width: 480px) {
+  .scoreboard .score-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
